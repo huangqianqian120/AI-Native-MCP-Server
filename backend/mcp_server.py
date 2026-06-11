@@ -39,7 +39,6 @@ from app.api.models.business_schema import BusinessSchema
 from app.core.generator import generate_project
 from app.core.zip_packer import pack_to_zip
 from app.core.schema_inferrer import SchemaInferrer
-from app.api.models.enums import ServiceMode
 from app.config import settings
 
 inferrer = SchemaInferrer()
@@ -57,16 +56,7 @@ TOOLS = [
                 },
                 "description": {
                     "type": "string",
-                    "description": "业务描述，例如：精品咖啡店，卖美式、拿铁、果汁，可堂食可外卖",
-                },
-                "service_modes": {
-                    "type": "array",
-                    "items": {"type": "string", "enum": ["dineIn", "takeout", "delivery", "reservation"]},
-                    "description": "服务模式，默认 dineIn",
-                },
-                "dishes_csv": {
-                    "type": "string",
-                    "description": "可选，CSV 格式的菜品数据，列：菜品名,分类,价格,描述",
+                    "description": "详细的业务描述，包括：业务类型、服务模式（堂食/外卖/自取）、菜品名与价格、规格选项等",
                 },
             },
             "required": ["project_name", "description"],
@@ -79,35 +69,10 @@ async def handle_generate(args: dict) -> dict:
     """Handle generate_miniprogram tool call."""
     project_name = args["project_name"]
     description = args.get("description", "")
-    service_modes = args.get("service_modes", ["dineIn"])
-    dishes_csv = args.get("dishes_csv", "")
 
-    # Parse CSV if provided
-    dishes = []
-    categories = []
-    seen_cats: set[str] = set()
-    if dishes_csv:
-        reader = csv.DictReader(io.StringIO(dishes_csv))
-        for row in reader:
-            dish = {
-                "name": row.get("菜品名", row.get("name", "")),
-                "category_name": row.get("分类", row.get("category", "未分类")),
-                "price": float(row.get("价格", row.get("price", 0))),
-                "description": row.get("描述", row.get("description", "")),
-            }
-            if dish["name"]:
-                dishes.append(dish)
-                cat_name = dish["category_name"]
-                if cat_name not in seen_cats:
-                    seen_cats.add(cat_name)
-                    categories.append({"name": cat_name, "display_order": len(categories)})
-
-    # Build basic schema
+    # Build basic schema — LLM will enrich it
     schema_data = {
         "project_name": project_name,
-        "service_modes": service_modes,
-        "categories": categories,
-        "dishes": dishes,
         "generated": {
             "skill_description": f"{project_name} — AI 驱动的智能点单助手",
             "constraint_rules": [
@@ -119,14 +84,11 @@ async def handle_generate(args: dict) -> dict:
     }
 
     # Use LLM if available
-    if settings.deepseek_api_key:
+    if settings.deepseek_api_key or settings.anthropic_api_key:
         from app.api.models.requests import InferSchemaRequest
         req = InferSchemaRequest(
             project_name=project_name,
             description=description,
-            service_modes=[ServiceMode(m) for m in service_modes if m in ServiceMode._value2member_map_],
-            categories=[{"name": c["name"], "description": "", "display_order": i} for i, c in enumerate(categories)],
-            dishes=[{"name": d["name"], "category_name": d.get("category_name", ""), "price": d["price"], "description": d.get("description", "")} for d in dishes],
         )
         try:
             schema = await inferrer.infer(req)
