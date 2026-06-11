@@ -16,9 +16,16 @@ source .venv/bin/activate
 # 3. 安装依赖
 pip install -r requirements.txt
 
-# 4. 配置 API Key
+# 4. 配置 API Key（可选）
+
+不配也能用，会走模板降级（不用 AI 推断）。
+需要用 LLM 增强 Schema 推断的话，二选一：
+
+```bash
 cp .env.example .env
-# 编辑 .env，填入你的 DEEPSEEK_API_KEY
+# 编辑 .env，填入你的 ANTHROPIC_API_KEY（推荐）
+# 或者 DEEPSEEK_API_KEY（改一行代码即可切换）
+```
 ```
 
 ## 配置 Claude Code
