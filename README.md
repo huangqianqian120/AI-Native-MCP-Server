@@ -1,6 +1,6 @@
-# AI-Native Mini Program Generator — MCP Server
+# AI-Native 餐饮点单小程序生成器 — MCP Server
 
-一键生成微信 AI Mode 小程序（Skill + MCP 架构）的 MCP Server。
+微信 AI Mode（Skill + MCP 架构）的餐饮点单小程序一键生成工具。
 
 ## 快速开始
 
