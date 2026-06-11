@@ -1,0 +1,30 @@
+Component({
+  data: { items: [], totalItems: 0, totalPrice: 0, expanded: false },
+  lifetimes: {
+    created() {
+      this._modelCtx = wx.modelContext.getContext(this)
+      const { NotificationType } = wx.modelContext
+      this._modelCtx.on(NotificationType.Result, (data) => {
+        const result = (data && data.result) || {}
+        const sc = result.structuredContent || {}
+        const meta = result._meta || {}
+        const cart = meta.cartSummary || sc.cartSummary || {}
+        this.setData({
+          items: cart.items || [], totalItems: cart.totalItems || 0,
+          totalPrice: cart.totalPrice || 0
+        })
+      })
+    }
+  },
+  methods: {
+    onToggleExpand() { this.setData({ expanded: !this.data.expanded }) },
+    onCheckout() {
+      this._modelCtx.sendFollowUpMessage({
+        content: [
+          { type: 'text', text: '确认下单' },
+          { type: 'api/call', data: { name: 'submitOrder', arguments: {} } }
+        ]
+      })
+    }
+  }
+})

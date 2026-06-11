@@ -1,0 +1,41 @@
+{
+  "pages": ["pages/home/home"],
+  "subPackages": [
+    {
+      "root": "skills",
+      "pages": [],
+      "independent": true
+    },
+    {
+      "root": "packageDetail",
+      "name": "detail",
+      "pages": [
+        "pages/sku-picker/index",
+        "pages/address-editor/index"
+      ],
+      "independent": true,
+      "componentFramework": "glass-easel",
+      "renderer": "skyline"
+    }
+  ],
+  "lazyCodeLoading": "requiredComponents",
+  "darkmode": true,
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "{$ schema.primary_color $}",
+    "navigationBarTitleText": "{$ schema.project_name $}",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#FFF8F0"
+  },
+  "agent": {
+    "skills": [
+      {
+        "name": "restaurant",
+        "description": "{$ schema.generated.skill_description $}",
+        "path": "skills/restaurant-skill"
+      }
+    ],
+    "pageMetadata": "page-meta.json"
+  },
+  "requiredPrivateInfos": ["chooseAddress", "chooseLocation"]
+}

@@ -1,0 +1,11 @@
+<view class="reserve-card" wx:if="{{success}}">
+  <view class="reserve-card__header">{{storeName}}</view>
+  <view wx:if="{{queueNumber}}" class="reserve-card__queue">
+    <text class="reserve-card__queue-label">排队号</text>
+    <text class="reserve-card__queue-num">{{queueNumber}}</text>
+    <text class="reserve-card__wait">预计等待 {{estimatedWait}}</text>
+  </view>
+  <view wx:elif="{{reserveTime}}" class="reserve-card__booking">
+    已预订 {{reserveTime}}
+  </view>
+</view>

@@ -1,0 +1,7 @@
+<view class="pay-card" wx:if="{{paidAmount > 0}}">
+  <view class="pay-card__icon">✅</view>
+  <view class="pay-card__title">支付成功</view>
+  <view class="pay-card__amount">¥{{paidAmount}}</view>
+  <view class="pay-card__meta" wx:if="{{estimatedReadyTime}}">预计 {{estimatedReadyTime}} 后出餐</view>
+  <button class="pay-card__track" bind:tap="onTrackOrder">查看订单状态</button>
+</view>

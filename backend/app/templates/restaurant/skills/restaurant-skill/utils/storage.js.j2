@@ -1,0 +1,50 @@
+// {$ schema.project_name $} — 本地存储工具
+const { buildCatalog } = require('../data/seed.js')
+
+// ── 目录 ──
+let _catalog = null
+function getCatalog() {
+  if (!_catalog) _catalog = buildCatalog()
+  return _catalog
+}
+
+// ── 购物车 ──
+let _carts = {}
+function getCart(storeId) { return _carts[storeId] || null }
+function addToCart({ storeId, dishId, quantity = 1, specs = {} }) {
+  if (!storeId || !dishId) return { success: false }
+  if (!_carts[storeId]) _carts[storeId] = { totalItems: 0, totalPrice: 0, items: [] }
+  const cart = _carts[storeId]
+
+  const dish = getCatalog().find(d => String(d.id) === String(dishId))
+  if (!dish) return { success: false }
+
+  cart.items.push({
+    dishId: dish.id, dishName: dish.name, price: dish.price,
+    quantity, specs, imageUrl: dish.imageUrl || ''
+  })
+  cart.totalItems += quantity
+  cart.totalPrice += dish.price * quantity
+  return { success: true, cart }
+}
+function removeFromCart(storeId, dishId) {
+  if (!_carts[storeId]) return
+  _carts[storeId].items = _carts[storeId].items.filter(i => String(i.dishId) !== String(dishId))
+  _carts[storeId].totalItems = _carts[storeId].items.reduce((s, i) => s + i.quantity, 0)
+  _carts[storeId].totalPrice = _carts[storeId].items.reduce((s, i) => s + i.price * i.quantity, 0)
+}
+function clearCart(storeId) { _carts[storeId] = { totalItems: 0, totalPrice: 0, items: [] } }
+
+// ── 订单 ──
+let _orders = []
+let _orderSeq = 1000
+function genOrderId() { return `ORD${++_orderSeq}` }
+function saveOrder(order) {
+  const idx = _orders.findIndex(o => o.orderId === order.orderId)
+  if (idx >= 0) _orders[idx] = order
+  else _orders.push(order)
+}
+function findOrder(orderId) { return _orders.find(o => o.orderId === orderId) || null }
+function getOrders() { return [..._orders] }
+
+module.exports = { getCatalog, getCart, addToCart, removeFromCart, clearCart, genOrderId, saveOrder, findOrder, getOrders }

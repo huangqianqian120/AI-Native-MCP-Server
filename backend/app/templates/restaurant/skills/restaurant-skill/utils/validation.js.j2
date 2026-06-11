@@ -1,0 +1,18 @@
+// {$ schema.project_name $} — 数据校验工具
+function validateSpecs(dishId, specs) {
+  // Basic validation — extend as needed
+  if (!specs || typeof specs !== 'object') {
+    return { valid: false, error: '规格参数格式不正确' }
+  }
+  return { valid: true, normalizedSpecs: specs }
+}
+
+function validatePhone(phone) {
+  return /^1[3-9]\d{9}$/.test(phone)
+}
+
+function validateAddress(addr) {
+  return addr && addr.name && addr.phone && addr.detail
+}
+
+module.exports = { validateSpecs, validatePhone, validateAddress }

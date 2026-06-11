@@ -1,0 +1,17 @@
+// 地址编辑半屏页
+Page({
+  data: { name: '', phone: '', detail: '' },
+  onInput(e) {
+    this.setData({ [e.currentTarget.dataset.field]: e.detail.value })
+  },
+  onSave() {
+    const { name, phone, detail } = this.data
+    if (!name || !phone || !detail) {
+      wx.showToast({ title: '请填写完整', icon: 'none' })
+      return
+    }
+    wx.setStorageSync('address', { name, phone, detail })
+    wx.showToast({ title: '保存成功' })
+    setTimeout(() => wx.navigateBack(), 1500)
+  }
+})

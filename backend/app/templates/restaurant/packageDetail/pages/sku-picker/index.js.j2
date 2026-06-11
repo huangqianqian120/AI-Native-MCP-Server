@@ -1,0 +1,25 @@
+// SKU 选择半屏页
+Page({
+  data: { dish: null, specs: [], currentSpecs: {}, totalPrice: 0, basePrice: 0 },
+  onLoad(query) {
+    const dishData = wx.getStorageSync('currentDish') || {}
+    this.setData({
+      dish: dishData, basePrice: dishData.price || 0,
+      totalPrice: dishData.price || 0,
+      specs: dishData.specDimensions || []
+    })
+  },
+  onSelectSpec(e) {
+    const { key, value, delta } = e.currentTarget.dataset
+    const newSpecs = { ...this.data.currentSpecs, [key]: value }
+    const extra = this.data.specs.reduce((sum, dim) => {
+      const opt = (dim.options || []).find(o => o.value === newSpecs[dim.key])
+      return sum + (opt ? (opt.extraPrice || 0) : 0)
+    }, 0)
+    this.setData({ currentSpecs: newSpecs, totalPrice: this.data.basePrice + extra })
+  },
+  onConfirm() {
+    wx.setStorageSync('selectedSpecs', this.data.currentSpecs)
+    wx.navigateBack()
+  }
+})

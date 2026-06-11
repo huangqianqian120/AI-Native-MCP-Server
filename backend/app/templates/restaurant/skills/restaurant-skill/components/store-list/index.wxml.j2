@@ -1,0 +1,14 @@
+<view class="store-list">
+  <view class="store-list__title">{$ schema.project_name $}</view>
+  <view class="store-list__subtitle">附近门店</view>
+  <view wx:for="{{stores}}" wx:key="storeId" class="store-card" data-store="{{item}}" bind:tap="onTapStore">
+    <view class="store-card__name">{{item.name}}</view>
+    <view class="store-card__meta">
+      <text class="store-card__distance">{{item.distance}}</text>
+      <text class="store-card__status {{item.status === 'open' ? 'status--open' : 'status--closed'}}">
+        {{item.status === 'open' ? '营业中' : '休息中'}}
+      </text>
+    </view>
+    <view class="store-card__address">{{item.address}}</view>
+  </view>
+</view>

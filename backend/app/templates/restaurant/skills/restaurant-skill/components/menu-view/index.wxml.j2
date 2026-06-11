@@ -1,0 +1,22 @@
+<view class="menu-view">
+  <view class="menu-view__title">{{title}}</view>
+  <scroll-view class="menu-view__categories" scroll-x>
+    <view wx:for="{{categories}}" wx:key="id"
+      class="category-tab {{activeCategory === item.id ? 'category-tab--active' : ''}}"
+      data-id="{{item.id}}" bind:tap="onTapCategory">
+      {{item.name}}({{item.count}})
+    </view>
+  </scroll-view>
+  <view class="menu-view__items">
+    <view wx:for="{{items}}" wx:key="dishId"
+      class="dish-item" data-item="{{item}}" bind:tap="onTapItem"
+      wx:if="{{!activeCategory || item.categoryId === activeCategory}}">
+      <image class="dish-item__img" src="{{item.imageUrl}}" mode="aspectFill" wx:if="{{item.imageUrl}}"/>
+      <view class="dish-item__info">
+        <view class="dish-item__name">{{item.name}}</view>
+        <view class="dish-item__desc" wx:if="{{item.description}}">{{item.description}}</view>
+        <view class="dish-item__price">¥{{item.price}}</view>
+      </view>
+    </view>
+  </view>
+</view>

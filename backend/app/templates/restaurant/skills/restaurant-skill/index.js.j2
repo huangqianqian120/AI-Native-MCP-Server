@@ -1,0 +1,14 @@
+// {$ schema.project_name $} — SKILL 注册入口
+const apis = {
+{% for api in apis %}
+  {$ api.name $}: require('./apis/{$ api.name $}.js'),
+{% endfor %}
+}
+
+const skill = wx.modelContext.createSkill('skills/restaurant-skill')
+
+{% for api in apis %}
+skill.registerAPI('{$ api.name $}', apis.{$ api.name $})
+{% endfor %}
+
+console.log('[restaurant-skill] {$ apis | length $} APIs registered via createSkill')

@@ -1,0 +1,15 @@
+<view class="track-card">
+  <view class="track-card__title">订单进度</view>
+  <view class="track-card__progress">
+    <view wx:for="{{progress}}" wx:key="step" class="track-step {{item.done ? 'track-step--done' : ''}}">
+      <view class="track-step__dot"></view>
+      <view class="track-step__info">
+        <text class="track-step__name">{{item.step}}</text>
+        <text class="track-step__time" wx:if="{{item.time}}">{{item.time}}</text>
+      </view>
+    </view>
+  </view>
+  <view wx:if="{{estimatedReadyTime}}" class="track-card__eta">
+    预计 {{estimatedReadyTime}}
+  </view>
+</view>

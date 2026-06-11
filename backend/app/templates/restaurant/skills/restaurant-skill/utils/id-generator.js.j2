@@ -1,0 +1,7 @@
+// {$ schema.project_name $} — ID 生成器
+let _counter = Date.now()
+function genId(prefix = '') {
+  return `${prefix}${++_counter}`
+}
+
+module.exports = { genId }

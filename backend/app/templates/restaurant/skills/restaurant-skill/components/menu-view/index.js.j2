@@ -1,0 +1,36 @@
+Component({
+  data: { categories: [], items: [], title: '菜单', activeCategory: null },
+  lifetimes: {
+    created() {
+      this._modelCtx = wx.modelContext.getContext(this)
+      const { NotificationType } = wx.modelContext
+      this._modelCtx.on(NotificationType.Result, (data) => {
+        const result = (data && data.result) || {}
+        const sc = result.structuredContent || {}
+        const meta = result._meta || {}
+        const categories = sc.categories || []
+        const items = meta.viewItems || sc.items || []
+        this.setData({
+          categories, items, title: sc.keyword ? `"${sc.keyword}" 搜索结果` : '菜单',
+          activeCategory: categories.length > 0 ? categories[0].id : null
+        })
+      })
+    }
+  },
+  methods: {
+    onTapCategory(e) {
+      const catId = e.currentTarget.dataset.id
+      this.setData({ activeCategory: catId })
+    },
+    onTapItem(e) {
+      const item = e.currentTarget.dataset.item
+      if (!item) return
+      this._modelCtx.sendFollowUpMessage({
+        content: [
+          { type: 'text', text: `选择${item.name}` },
+          { type: 'api/call', data: { name: 'getDishDetail', arguments: { dishId: item.dishId } } }
+        ]
+      })
+    }
+  }
+})

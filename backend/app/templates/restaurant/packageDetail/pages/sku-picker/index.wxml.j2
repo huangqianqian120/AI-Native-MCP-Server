@@ -1,0 +1,20 @@
+<view class="sku-page" wx:if="{{dish}}">
+  <view class="sku-page__header">
+    <image class="sku-page__img" src="{{dish.imageUrl}}" mode="aspectFill" wx:if="{{dish.imageUrl}}"/>
+    <text class="sku-page__name">{{dish.name}}</text>
+    <text class="sku-page__price">¥{{totalPrice}}</text>
+  </view>
+  <view wx:for="{{specs}}" wx:key="key" class="sku-group">
+    <view class="sku-group__label">{{item.label || item.name}}</view>
+    <view class="sku-group__options">
+      <view wx:for="{{item.options}}" wx:for-item="opt" wx:key="value"
+        class="sku-option {{currentSpecs[item.key] === opt.value ? 'sku-option--selected' : ''}}"
+        data-key="{{item.key}}" data-value="{{opt.value}}" data-delta="{{opt.extraPrice || 0}}"
+        bind:tap="onSelectSpec">
+        {{opt.label}}
+        <text wx:if="{{opt.extraPrice > 0}}">+¥{{opt.extraPrice}}</text>
+      </view>
+    </view>
+  </view>
+  <button class="sku-page__confirm" bind:tap="onConfirm">确认 ¥{{totalPrice}}</button>
+</view>

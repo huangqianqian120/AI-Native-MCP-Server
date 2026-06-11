@@ -1,0 +1,18 @@
+Component({
+  data: { success: false, storeName: '', queueNumber: '', estimatedWait: '', reserveTime: '' },
+  lifetimes: {
+    created() {
+      this._modelCtx = wx.modelContext.getContext(this)
+      const { NotificationType } = wx.modelContext
+      this._modelCtx.on(NotificationType.Result, (data) => {
+        const result = (data && data.result) || {}
+        const sc = result.structuredContent || {}
+        this.setData({
+          success: sc.success || false, storeName: sc.storeName || '',
+          queueNumber: sc.queueNumber || '', estimatedWait: sc.estimatedWait || '',
+          reserveTime: sc.reserveTime || ''
+        })
+      })
+    }
+  }
+})

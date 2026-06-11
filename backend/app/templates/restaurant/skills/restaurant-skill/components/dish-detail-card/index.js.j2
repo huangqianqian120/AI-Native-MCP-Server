@@ -1,0 +1,44 @@
+Component({
+  data: { dish: null, specs: [], basePrice: 0, totalPrice: 0, currentSpecs: {} },
+  lifetimes: {
+    created() {
+      this._modelCtx = wx.modelContext.getContext(this)
+      const { NotificationType } = wx.modelContext
+      this._modelCtx.on(NotificationType.Result, (data) => {
+        const result = (data && data.result) || {}
+        const sc = result.structuredContent || {}
+        const meta = result._meta || {}
+        const items = sc.items || meta.viewItems || []
+        const dish = items[0] || {}
+        this.setData({
+          dish, basePrice: dish.price || 0, totalPrice: dish.price || 0,
+          specs: dish.specDimensions || [],
+          currentSpecs: {}
+        })
+      })
+    }
+  },
+  methods: {
+    onSelectSpec(e) {
+      const { key, value, delta } = e.currentTarget.dataset
+      const newSpecs = { ...this.data.currentSpecs, [key]: value }
+      const extra = this.data.specs.reduce((sum, dim) => {
+        const opt = (dim.options || []).find(o => o.value === newSpecs[dim.key])
+        return sum + (opt ? (opt.extraPrice || 0) : 0)
+      }, 0)
+      this.setData({ currentSpecs: newSpecs, totalPrice: this.data.basePrice + extra })
+    },
+    onAddToCart() {
+      this._modelCtx.sendFollowUpMessage({
+        content: [
+          { type: 'text', text: `加购${this.data.dish.name}，规格已选` },
+          { type: 'api/call', data: { name: 'addToCart', arguments: { dishId: this.data.dish.dishId, specs: this.data.currentSpecs } } }
+        ]
+      })
+    },
+    onOpenSkuPicker() {
+      const ctx = wx.modelContext.getViewContext(this)
+      ctx.openDetailPage({ url: '/packageDetail/pages/sku-picker' })
+    }
+  }
+})

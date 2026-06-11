@@ -1,0 +1,90 @@
+{
+  "apis": [
+{% set apis_list = apis %}
+{% for api in apis_list %}
+    {
+      "name": "{$ api.name $}",
+      "description": {$ api.description | tojson $},
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          {%- if api.name == "getNearbyStores" %}
+          "lat": { "type": "number", "description": "纬度，默认获取用户位置" },
+          "lng": { "type": "number", "description": "经度" },
+          "mode": { "type": "string", "enum": ["dineIn", "takeout", "delivery"], "description": "就餐模式" }
+          {%- elif api.name in ["getMenu", "getRecommendations"] %}
+          "storeId": { "type": "string", "description": "门店ID" },
+          "categoryId": { "type": "string", "description": "可选，分类ID" }
+          {%- elif api.name in ["getDishDetail"] %}
+          "dishId": { "type": "number", "description": "菜品ID，必须来自上游接口" }
+          {%- elif api.name in ["searchDishes"] %}
+          "keyword": { "type": "string", "description": "搜索关键词" }
+          {%- elif api.name == "addToCart" %}
+          "storeId": { "type": "string" },
+          "dishId": { "type": "string" },
+          "quantity": { "type": "number", "default": 1 },
+          "specs": { "type": "object", "description": "规格选择" }
+          {%- elif api.name == "removeFromCart" %}
+          "storeId": { "type": "string" },
+          "dishId": { "type": "string" }
+          {%- elif api.name == "getCart" %}
+          "storeId": { "type": "string" }
+          {%- elif api.name == "submitOrder" %}
+          "storeId": { "type": "string" },
+          "mode": { "type": "string", "enum": ["dineIn", "takeout", "delivery"] },
+          "dineInInfo": { "type": "object", "properties": { "tableNumber": {"type": "string"}, "guestCount": {"type": "number"} } },
+          "deliveryAddress": { "type": "object", "properties": { "name": {"type": "string"}, "phone": {"type": "string"}, "detail": {"type": "string"} } },
+          "remark": { "type": "string", "description": "备注" }
+          {%- elif api.name == "payOrder" %}
+          "orderId": { "type": "string" }
+          {%- elif api.name == "getOrderHistory" %}
+          "status": { "type": "string", "enum": ["all", "paid", "cooking", "ready", "completed"], "description": "筛选状态" }
+          {%- elif api.name == "quickReorder" %}
+          "orderId": { "type": "string", "description": "历史订单ID" }
+          {%- elif api.name == "trackOrder" %}
+          "orderId": { "type": "string" }
+          {%- elif api.name == "reserveTable" %}
+          "storeId": { "type": "string" },
+          "type": { "type": "string", "enum": ["reserve", "queue"] },
+          "guestCount": { "type": "number" },
+          "time": { "type": "string", "description": "用餐时间" }
+          {%- elif api.name == "getCoupons" %}
+          {# no input params #}
+          {%- else %}
+          {# no input params #}
+          {%- endif %}
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "isError": { "type": "boolean" },
+          "content": { "type": "array", "items": { "type": "object" } },
+          "structuredContent": { "type": "object" },
+          "_meta": { "type": "object" }
+        }
+      }
+      {%- if api.requires_component %}
+      ,
+      "_meta": {
+        "ui": {
+          "componentPath": "components/{$ api.name | lower | replace('get', '') | replace('set', '') | replace('nearbystores', 'store-list') | replace('menu', 'menu-view') | replace('dishdetail', 'dish-detail-card') | replace('searchdishes', 'dish-detail-card') | replace('recommendations', 'menu-view') | replace('addtocart', 'cart-summary-card') | replace('cart', 'cart-summary-card') | replace('removefromcart', 'cart-summary-card') | replace('submitorder', 'order-confirm-card') | replace('payorder', 'pay-success-card') | replace('orderhistory', 'order-list-card') | replace('orderdetail', 'order-list-card') | replace('quickreorder', 'order-confirm-card') | replace('trackorder', 'order-tracking-card') | replace('coupons', 'coupon-list-card') | replace('claimcoupon', 'coupon-list-card') | replace('applycoupon', 'coupon-list-card') | replace('reservetable', 'reservation-card') $}"
+        }
+      }
+      {%- endif %}
+    }{% if not loop.last %},{% endif %}
+{% endfor %}
+  ],
+  "components": [
+    { "path": "components/store-list/index", "relatedPage": "/packageDetail/pages/sku-picker" },
+    { "path": "components/menu-view/index", "relatedPage": "/packageDetail/pages/sku-picker" },
+    { "path": "components/dish-detail-card/index", "relatedPage": "/packageDetail/pages/sku-picker" },
+    { "path": "components/cart-summary-card/index", "relatedPage": "/packageDetail/pages/sku-picker" },
+    { "path": "components/order-confirm-card/index", "relatedPage": "/packageDetail/pages/address-editor" },
+    { "path": "components/pay-success-card/index", "relatedPage": "/pages/home/home" },
+    { "path": "components/order-list-card/index", "relatedPage": "/pages/home/home" },
+    { "path": "components/order-tracking-card/index", "relatedPage": "/pages/home/home" },
+    { "path": "components/coupon-list-card/index", "relatedPage": "/pages/home/home" },
+    { "path": "components/reservation-card/index", "relatedPage": "/pages/home/home" }
+  ]
+}

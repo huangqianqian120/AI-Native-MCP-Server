@@ -1,0 +1,47 @@
+// {$ schema.project_name $} — 商品数据种子
+{% set cat_ids = [] %}
+{% for cat in schema.categories %}{% set _ = cat_ids.append(cat.id) %}{% endfor %}
+
+const CATEGORIES = [
+{% for cat in schema.categories %}
+  { id: '{$ cat.id $}', name: '{$ cat.name $}', displayOrder: {$ cat.display_order $} }{% if not loop.last %},{% endif %}
+{% endfor %}
+]
+
+const DRINKS = [  // kept as DRINKS for backward compatibility with base template
+{% for dish in schema.dishes %}
+  { id: '{$ dish.id $}', name: '{$ dish.name $}', price: {$ dish.price $}, categoryId: '{$ dish.category_id $}', categoryName: '{$ schema.categories | selectattr("id", "equalto", dish.category_id) | map(attribute="name") | first | default("") $}', description: '{$ dish.description $}', imageUrl: '{$ dish.image_url $}', tags: [{% for t in dish.tags %}'{$ t $}'{% if not loop.last %}, {% endif %}{% endfor %}] }{% if not loop.last %},{% endif %}
+{% endfor %}
+]
+
+{% if schema.spec_dimensions %}
+const SPEC_DIMENSIONS = [
+{% for dim in schema.spec_dimensions %}
+  {
+    id: '{$ dim.id $}', name: '{$ dim.name $}', type: '{$ dim.type $}', isRequired: {$ dim.is_required | lower $},
+    options: [
+    {% for opt in dim.options %}
+      { value: '{$ opt.id $}', label: '{$ opt.label $}', extraPrice: {$ opt.price_delta $}, isDefault: {$ opt.is_default | lower $} }{% if not loop.last %},{% endif %}
+    {% endfor %}
+    ]
+  }{% if not loop.last %},{% endif %}
+{% endfor %}
+]
+{% endif %}
+
+function buildCatalog() {
+  return DRINKS.map(d => ({
+    ...d,
+    {% if schema.spec_dimensions %}
+    specDimensions: SPEC_DIMENSIONS.map(sd => ({
+      ...sd,
+      // each dish may override which spec options are available
+      options: sd.options
+    }))
+    {% else %}
+    specDimensions: []
+    {% endif %}
+  }))
+}
+
+module.exports = { CATEGORIES, DRINKS, {% if schema.spec_dimensions %}SPEC_DIMENSIONS, {% endif %}buildCatalog }

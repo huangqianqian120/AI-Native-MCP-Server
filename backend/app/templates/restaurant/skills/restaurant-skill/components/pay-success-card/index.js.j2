@@ -1,0 +1,27 @@
+Component({
+  data: { orderId: '', paidAmount: 0, payTime: '', estimatedReadyTime: '' },
+  lifetimes: {
+    created() {
+      this._modelCtx = wx.modelContext.getContext(this)
+      const { NotificationType } = wx.modelContext
+      this._modelCtx.on(NotificationType.Result, (data) => {
+        const result = (data && data.result) || {}
+        const sc = result.structuredContent || {}
+        this.setData({
+          orderId: sc.orderId || '', paidAmount: sc.paidAmount || 0,
+          payTime: sc.payTime || '', estimatedReadyTime: sc.estimatedReadyTime || ''
+        })
+      })
+    }
+  },
+  methods: {
+    onTrackOrder() {
+      this._modelCtx.sendFollowUpMessage({
+        content: [
+          { type: 'text', text: '查看订单状态' },
+          { type: 'api/call', data: { name: 'trackOrder', arguments: { orderId: this.data.orderId } } }
+        ]
+      })
+    }
+  }
+})

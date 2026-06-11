@@ -1,0 +1,27 @@
+Component({
+  data: { coupons: [] },
+  lifetimes: {
+    created() {
+      this._modelCtx = wx.modelContext.getContext(this)
+      const { NotificationType } = wx.modelContext
+      this._modelCtx.on(NotificationType.Result, (data) => {
+        const result = (data && data.result) || {}
+        const sc = result.structuredContent || {}
+        const meta = result._meta || {}
+        this.setData({ coupons: meta.coupons || sc.coupons || [] })
+      })
+    }
+  },
+  methods: {
+    onClaim(e) {
+      const cpn = e.currentTarget.dataset.coupon
+      if (!cpn) return
+      this._modelCtx.sendFollowUpMessage({
+        content: [
+          { type: 'text', text: `领取优惠券 ${cpn.title}` },
+          { type: 'api/call', data: { name: 'claimCoupon', arguments: { couponId: cpn.couponId } } }
+        ]
+      })
+    }
+  }
+})

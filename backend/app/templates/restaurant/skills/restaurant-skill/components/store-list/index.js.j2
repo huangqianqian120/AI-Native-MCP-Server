@@ -1,0 +1,28 @@
+Component({
+  data: { stores: [], title: '附近门店' },
+  lifetimes: {
+    created() {
+      this._modelCtx = wx.modelContext.getContext(this)
+      this._viewCtx = wx.modelContext.getViewContext(this)
+      const { NotificationType } = wx.modelContext
+      this._modelCtx.on(NotificationType.Result, (data) => {
+        const result = (data && data.result) || {}
+        const meta = result._meta || {}
+        const stores = meta.stores || result.structuredContent?.stores || []
+        this.setData({ stores })
+      })
+    }
+  },
+  methods: {
+    onTapStore(e) {
+      const store = e.currentTarget.dataset.store
+      if (!store) return
+      this._modelCtx.sendFollowUpMessage({
+        content: [
+          { type: 'text', text: `选择${store.name}` },
+          { type: 'api/call', data: { name: 'getMenu', arguments: { storeId: store.storeId } } }
+        ]
+      })
+    }
+  }
+})

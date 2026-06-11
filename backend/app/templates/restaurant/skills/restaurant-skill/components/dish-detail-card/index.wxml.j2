@@ -1,0 +1,29 @@
+<view class="dish-detail" wx:if="{{dish}}">
+  <image class="dish-detail__img" src="{{dish.imageUrl}}" mode="aspectFill" wx:if="{{dish.imageUrl}}"/>
+  <view class="dish-detail__body">
+    <view class="dish-detail__name">{{dish.name}}</view>
+    <view class="dish-detail__desc" wx:if="{{dish.description}}">{{dish.description}}</view>
+    <view class="dish-detail__price">¥{{totalPrice}}</view>
+
+    <view wx:for="{{specs}}" wx:key="key" class="spec-group">
+      <view class="spec-group__label">{{item.label || item.name}}</view>
+      <view class="spec-group__options">
+        <view wx:for="{{item.options}}" wx:for-item="opt" wx:key="value"
+          class="spec-option {{currentSpecs[item.key] === opt.value ? 'spec-option--selected' : ''}}"
+          data-key="{{item.key}}" data-value="{{opt.value}}" data-delta="{{opt.extraPrice || 0}}"
+          bind:tap="onSelectSpec">
+          {{opt.label}}
+          <text wx:if="{{opt.extraPrice > 0}}">+¥{{opt.extraPrice}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="dish-detail__actions">
+      <button class="btn btn--primary" bind:tap="onAddToCart">加入购物车</button>
+      <button class="btn btn--secondary" bind:tap="onOpenSkuPicker">选规格</button>
+    </view>
+  </view>
+</view>
+<view class="dish-detail--empty" wx:else>
+  <view class="dish-detail__empty-text">请先搜索或推荐饮品</view>
+</view>

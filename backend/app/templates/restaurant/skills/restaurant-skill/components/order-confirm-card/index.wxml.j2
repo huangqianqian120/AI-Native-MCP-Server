@@ -1,0 +1,20 @@
+<view class="order-card" wx:if="{{order}}">
+  <view class="order-card__header">确认订单</view>
+  <view class="order-card__items">
+    <view wx:for="{{items}}" wx:key="dishId" class="order-item">
+      <text>{{item.dishName}} x{{item.quantity}}</text>
+      <text>¥{{item.price * item.quantity}}</text>
+    </view>
+  </view>
+  <view class="order-card__total">
+    <text>合计</text>
+    <text class="order-card__price">¥{{totalPrice}}</text>
+  </view>
+  <view class="order-card__address" bind:tap="onAddress" wx:if="{{needAddress}}">
+    ⚠️ 请添加收货地址
+  </view>
+  <button class="order-card__pay" bind:tap="onPay" wx:if="{{status === 'confirmed'}}">
+    确认支付 ¥{{totalPrice}}
+  </button>
+  <view class="order-card__status" wx:if="{{orderId}}">订单号：{{orderId}}</view>
+</view>

@@ -1,0 +1,75 @@
+# {$ schema.project_name $} — AI 点单 Skill
+
+## 业务流程图
+
+```
+用户意图
+  │
+  ├─ "附近有什么吃的" ──→ getNearbyStores → 门店列表卡片
+  │                                              │
+  ├─ "看看菜单" ─────────→ getMenu → 菜单卡片（分类Tab）─┤
+  │                                                      │
+  ├─ 具体菜品名（"宫保鸡丁"）→ searchDishes → 菜品卡片 ──┤
+  │                                                      │
+  ├─ "推荐一下" ─────────→ getRecommendations → 推荐卡片 ─┤
+  │                                                      │
+  │                      用户从卡片选择菜品                │
+  │                              ↓                       │
+  │                       getDishDetail → 详情卡片        │
+  │                              ↓                       │
+  │                   用户选规格 → addToCart               │
+  │                              ↓                       │
+  │              ┌───────── 购物车 ─────────┐             │
+  │              │ 继续加菜/删菜/修改数量    │             │
+  │              └────────────┬────────────┘             │
+  │                           ↓                          │
+  │                      submitOrder → 订单确认卡片       │
+  │                           │                          │
+  │               ┌───────────┴───────────┐              │
+  │               ↓                       ↓              │
+  │         堂食: 桌号                外卖: 地址          │
+  │               ↓                       ↓              │
+  │                      payOrder → 支付成功卡片          │
+  │                           │                          │
+  │                    ┌──────┴──────┐                   │
+  │                    ↓             ↓                   │
+  │              制作中 → 出餐    配送中 → 送达           │
+  │                                                    │
+  └─ "我的订单" ─────→ getOrderHistory → 订单列表卡片
+     "再来一份" ─────→ quickReorder → 订单确认卡片
+{% if 'delivery' in (schema.service_modes | map(attribute='value')) %}
+     "送到XX地址" ──→ setDeliveryAddress / trackDelivery
+{% endif %}
+{% if schema.features.has_table_reservation %}
+     "订座/排队" ────→ reserveTable → 预订卡片
+{% endif %}
+{% if schema.features.has_coupons %}
+     "优惠券" ───────→ getCoupons → 优惠券卡片
+{% endif %}
+```
+
+> **AI 不能编造菜品数据**— 所有数据必须来自接口返回值。
+> **AI 不能跳过 addToCart 直接调 submitOrder** — 必须先有确认的购物车内容。
+
+## 原子接口
+
+{% for api in apis %}
+### {$ api.name $}
+{$ api.description $}
+{%- if api.requires_component %}
+_绑定组件：{$ api.name | lower | replace('get', '') | replace('set', '') $} 卡片_
+{% endif %}
+{% endfor %}
+
+## 业务约束
+
+{% for rule in schema.generated.constraint_rules %}
+- {$ rule $}
+{% endfor %}
+- 所有返回结构必须包含 content + structuredContent + _meta 三段
+
+## 用户意图分流
+
+{% for label in schema.generated.scenario_labels %}
+- 「{$ label $}」场景 — 由 LLM 根据用户表达动态匹配
+{% endfor %}

@@ -1,0 +1,14 @@
+<view class="order-list">
+  <view class="order-list__title">{{title}}</view>
+  <view wx:for="{{orders}}" wx:key="orderId" class="order-row" data-order="{{item}}" bind:tap="onTapOrder">
+    <view class="order-row__top">
+      <text class="order-row__store">{{item.storeName || item.dishName || item.drinkName || '订单'}}</text>
+      <text class="order-row__price">¥{{item.totalPrice}}</text>
+    </view>
+    <view class="order-row__bottom">
+      <text class="order-row__time">{{item.createTime}}</text>
+      <text class="order-row__status">{{item.status}}</text>
+    </view>
+  </view>
+  <view wx:if="{{orders.length === 0}}" class="order-list__empty">暂无订单记录</view>
+</view>

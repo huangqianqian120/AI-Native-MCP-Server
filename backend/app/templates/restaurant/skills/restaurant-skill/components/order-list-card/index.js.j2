@@ -1,0 +1,30 @@
+Component({
+  data: { orders: [], title: '我的订单' },
+  lifetimes: {
+    created() {
+      this._modelCtx = wx.modelContext.getContext(this)
+      const { NotificationType } = wx.modelContext
+      this._modelCtx.on(NotificationType.Result, (data) => {
+        const result = (data && data.result) || {}
+        const sc = result.structuredContent || {}
+        const meta = result._meta || {}
+        this.setData({
+          orders: meta.orders || sc.orders || [],
+          title: sc.total > 0 ? `我的订单（${sc.total}）` : '我的订单'
+        })
+      })
+    }
+  },
+  methods: {
+    onTapOrder(e) {
+      const order = e.currentTarget.dataset.order
+      if (!order) return
+      this._modelCtx.sendFollowUpMessage({
+        content: [
+          { type: 'text', text: `查看订单 ${order.orderId}` },
+          { type: 'api/call', data: { name: 'trackOrder', arguments: { orderId: order.orderId } } }
+        ]
+      })
+    }
+  }
+})

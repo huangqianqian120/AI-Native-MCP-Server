@@ -1,0 +1,228 @@
+// {$ api_name $} — 原子接口实现
+// 规范：
+// - content：「事实陈述 + 业务动作」两段式
+// - structuredContent：供 Agent 理解（精简，不含 imageUrl）
+// - _meta：组件渲染用（含 imageUrl），Agent 不可见
+{% set store_count = stores | length %}
+{% set dish_count = dishes | length %}
+{% set has_categories = categories | length > 0 %}
+
+async function {$ api_name $}(params = {}) {
+  try {
+    // ── 参数校验 ──
+{% if api_name == "getNearbyStores" %}
+    const { getCatalog } = require('../utils/storage.js')
+    const catalog = getCatalog()
+
+    return {
+      isError: false,
+      content: [{ type: 'text', text: '已获取附近门店信息。接下来为用户展示门店列表卡片，引导用户选择门店。' }],
+      structuredContent: {
+        stores: [
+          { "storeId": "store_01", "name": "{$ project_name $} 总店", "distance": "1.2km", "status": "open" }
+        ]
+      },
+      _meta: {
+        stores: [
+          { "storeId": "store_01", "name": "{$ project_name $} 总店", "distance": "1.2km", "address": "示例地址", "status": "open", "queueCount": 0 }
+        ]
+      }
+    }
+{% elif api_name == "getMenu" %}
+    const { getCatalog } = require('../utils/storage.js')
+    const catalog = getCatalog()
+
+    const categories = [
+{% for cat in categories %}
+      { "id": "{$ cat.id $}", "name": "{$ cat.name $}", "count": {$ dishes | selectattr('category_id', 'equalto', cat.id) | list | length $} }{% if not loop.last %},{% endif %}
+{% endfor %}
+    ]
+
+    const items = catalog.map(d => ({
+      dishId: d.id, name: d.name, price: d.price,
+      categoryName: categories.find(c => c.id === d.categoryId)?.name || '',
+      description: d.description || '', imageUrl: d.imageUrl || ''
+    }))
+
+    return {
+      isError: false,
+      content: [{ type: 'text', text: '已加载菜单。接下来为用户展示菜单卡片，用简短话术引导用户选菜。' }],
+      structuredContent: { categories, items, total: items.length },
+      _meta: { categories, viewItems: items }
+    }
+{% elif api_name == "getDishDetail" or api_name == "searchDishes" %}
+    if (!params.keyword && !params.dishId) {
+      return { isError: true, content: [{ type: 'text', text: '缺少关键词或菜品ID。请反问用户想搜什么。' }] }
+    }
+    const { getCatalog } = require('../utils/storage.js')
+    const catalog = getCatalog()
+    const kw = (params.keyword || '').toLowerCase()
+    const matched = params.dishId
+      ? catalog.filter(d => d.id == params.dishId)
+      : catalog.filter(d => d.name.toLowerCase().includes(kw))
+
+    if (!matched.length) {
+      return { isError: true, content: [{ type: 'text', text: '未找到匹配的菜品，请换个关键词。' }] }
+    }
+
+    const items = matched.slice(0, 3).map(d => ({
+      dishId: d.id, name: d.name, price: d.price,
+      categoryName: d.categoryName || '', description: d.description || '',
+      imageUrl: d.imageUrl || ''
+    }))
+
+    return {
+      isError: false,
+      content: [{ type: 'text', text: `找到 ${matched.length} 款匹配菜品。展示菜品卡片引导用户选择。` }],
+      structuredContent: { items, total: matched.length, keyword: params.keyword || '' },
+      _meta: { viewItems: items }
+    }
+{% elif api_name == "addToCart" %}
+    const { addToCart } = require('../utils/storage.js')
+    const result = addToCart(params)
+
+    return {
+      isError: !result.success,
+      content: [{ type: 'text', text: result.success ? '已加入购物车。展示购物车摘要卡片。' : '加购失败。' }],
+      structuredContent: {
+        cartSummary: result.cart || { totalItems: 0, totalPrice: 0, items: [] }
+      },
+      _meta: { cartSummary: result.cart }
+    }
+{% elif api_name == "getCart" or api_name == "removeFromCart" %}
+    const { getCart, removeFromCart } = require('../utils/storage.js')
+    if (params.dishId) removeFromCart(params.storeId, params.dishId)
+    const cart = getCart(params.storeId) || { totalItems: 0, totalPrice: 0, items: [] }
+
+    return {
+      isError: false,
+      content: [{ type: 'text', text: cart.totalItems > 0 ? '当前购物车内容如下。' : '购物车为空。引导用户继续点餐。' }],
+      structuredContent: { cartSummary: cart },
+      _meta: { cartSummary: cart }
+    }
+{% elif api_name == "submitOrder" %}
+    const { getCart, clearCart, saveOrder, genOrderId } = require('../utils/storage.js')
+    const cart = getCart(params.storeId)
+    if (!cart || !cart.items || cart.items.length === 0) {
+      return { isError: true, content: [{ type: 'text', text: '购物车为空，无法下单。引导用户先点餐。' }] }
+    }
+
+    const orderId = genOrderId()
+    const order = {
+      orderId, storeId: params.storeId,
+      items: cart.items, totalPrice: cart.totalPrice,
+      mode: params.mode || 'dineIn', status: 'confirmed',
+      remark: params.remark || '',
+      createTime: new Date().toISOString()
+    }
+    saveOrder(order)
+    clearCart(params.storeId)
+
+    return {
+      isError: false,
+      content: [{ type: 'text', text: `订单已生成（¥${order.totalPrice}）。展示订单确认卡片引导用户支付。` }],
+      structuredContent: {
+        orderId, totalPrice: order.totalPrice, status: order.status,
+        mode: order.mode, items: order.items,
+        estimatedReadyTime: '15-20分钟'
+      },
+      _meta: { order, items: cart.items }
+    }
+{% elif api_name == "payOrder" %}
+    const { findOrder } = require('../utils/storage.js')
+    const order = findOrder(params.orderId)
+    if (!order) {
+      return { isError: true, content: [{ type: 'text', text: '未找到订单。请重新下单。' }] }
+    }
+
+    return {
+      isError: false,
+      content: [{ type: 'text', text: '支付成功！展示支付成功卡片。禁止在调用前宣布已支付。' }],
+      structuredContent: {
+        orderId: order.orderId, paidAmount: order.totalPrice,
+        status: 'paid', payTime: new Date().toISOString(),
+        estimatedReadyTime: '15-20分钟'
+      },
+      _meta: { order }
+    }
+{% elif api_name == "getOrderHistory" or api_name == "getOrderDetail" %}
+    const { getOrders } = require('../utils/storage.js')
+    const orders = getOrders().filter(o => !params.status || params.status === 'all' || o.status === params.status)
+
+    return {
+      isError: false,
+      content: [{ type: 'text', text: orders.length > 0 ? `找到 ${orders.length} 笔订单。` : '暂无历史订单。' }],
+      structuredContent: { orders: orders.slice(0, 10), total: orders.length },
+      _meta: { orders: orders.slice(0, 10) }
+    }
+{% elif api_name == "quickReorder" %}
+    const { findOrder, saveOrder, genOrderId } = require('../utils/storage.js')
+    const old = findOrder(params.orderId)
+    if (!old) {
+      return { isError: true, content: [{ type: 'text', text: '未找到历史订单。' }] }
+    }
+    const newId = genOrderId()
+    const order = { ...old, orderId: newId, status: 'confirmed', createTime: new Date().toISOString() }
+    saveOrder(order)
+
+    return {
+      isError: false,
+      content: [{ type: 'text', text: '已按上次订单重新下单。展示订单确认卡片。' }],
+      structuredContent: { orderId: newId, totalPrice: order.totalPrice, status: 'confirmed' },
+      _meta: { order }
+    }
+{% elif api_name == "reserveTable" %}
+    return {
+      isError: false,
+      content: [{ type: 'text', text: `已${params.type === 'queue' ? '取号排队' : '预订'}成功。展示预订卡片。` }],
+      structuredContent: {
+        success: true, storeName: params.storeId === 'store_01' ? '{$ project_name $} 总店' : '',
+        queueNumber: params.type === 'queue' ? 'A012' : undefined,
+        estimatedWait: '约15分钟', reserveTime: params.time || ''
+      },
+      _meta: { reservation: { storeName: '{$ project_name $} 总店', guestCount: params.guestCount || 2 } }
+    }
+{% elif api_name == "trackOrder" %}
+    return {
+      isError: false,
+      content: [{ type: 'text', text: '查询订单状态成功。展示订单追踪卡片。' }],
+      structuredContent: {
+        orderId: params.orderId, status: 'cooking',
+        estimatedReadyTime: '15-20分钟',
+        progress: [
+          { step: '已支付', time: '12:00', done: true },
+          { step: '制作中', time: '12:05', done: true },
+          { step: '已完成', time: '', done: false }
+        ]
+      },
+      _meta: {}
+    }
+{% elif api_name == "getCoupons" %}
+    return {
+      isError: false,
+      content: [{ type: 'text', text: '以下是可用优惠券。' }],
+      structuredContent: {
+        coupons: [
+          { couponId: "cpn_01", title: "新客立减", description: "满20减5", threshold: "满20元可用" }
+        ]
+      },
+      _meta: { coupons: [{ couponId: "cpn_01", title: "新客立减", description: "满20减5元", threshold: "满20元可用", expireDate: "2026-12-31" }] }
+    }
+{% else %}
+    return {
+      isError: false,
+      content: [{ type: 'text', text: '操作成功。' }],
+      structuredContent: {},
+      _meta: {}
+    }
+{% endif %}
+  } catch (err) {
+    console.error('[{$ api_name $}] error', err)
+    return {
+      isError: true,
+      content: [{ type: 'text', text: `操作失败：${err.message || '未知错误'}。请引导用户稍后重试。` }]
+    }
+  }
+}
+
+module.exports = {$ api_name $}

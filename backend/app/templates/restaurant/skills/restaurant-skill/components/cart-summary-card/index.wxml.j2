@@ -1,0 +1,13 @@
+<view class="cart-card">
+  <view class="cart-card__header" bind:tap="onToggleExpand">
+    <text class="cart-card__title">🛒 购物车</text>
+    <text class="cart-card__count">{{totalItems}} 件，¥{{totalPrice}}</text>
+  </view>
+  <view class="cart-card__body" wx:if="{{expanded && items.length > 0}}">
+    <view wx:for="{{items}}" wx:key="dishId" class="cart-item">
+      <text class="cart-item__name">{{item.dishName}} x{{item.quantity}}</text>
+      <text class="cart-item__price">¥{{item.price * item.quantity}}</text>
+    </view>
+    <button class="cart-card__checkout" bind:tap="onCheckout">去下单</button>
+  </view>
+</view>
