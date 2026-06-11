@@ -20,33 +20,23 @@ Configure in ~/.claude.json:
 
 from __future__ import annotations
 
-import csv
-import io
 import json
-import os
 import shutil
 import sys
-import traceback
 from pathlib import Path
 
 # Add parent dir to path so app module is importable
 sys.path.insert(0, str(Path(__file__).parent))
 
-# API key loaded from .env via pydantic-settings (config.py)
-# Set DEEPSEEK_API_KEY in .env or export it in shell
-
 from app.api.models.business_schema import BusinessSchema
+from app.api.models.enums import ServiceMode
 from app.core.generator import generate_project
 from app.core.zip_packer import pack_to_zip
-from app.core.schema_inferrer import SchemaInferrer
-from app.config import settings
-
-inferrer = SchemaInferrer()
 
 TOOLS = [
     {
         "name": "generate_miniprogram",
-        "description": "从业务描述一键生成 AI-native 微信小程序项目，返回 ZIP 文件路径。",
+        "description": "根据结构化数据生成 AI-native 微信小程序项目，返回 ZIP 文件路径。",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -54,26 +44,86 @@ TOOLS = [
                     "type": "string",
                     "description": "项目名称，例如 小喵咖啡",
                 },
-                "description": {
-                    "type": "string",
-                    "description": "详细的业务描述，包括：业务类型、服务模式（堂食/外卖/自取）、菜品名与价格、规格选项等",
+                "service_modes": {
+                    "type": "array",
+                    "items": {"type": "string", "enum": ["dineIn", "takeout", "delivery", "reservation"]},
+                    "description": "服务模式：堂食/自取/外卖/预订",
+                },
+                "categories": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name": {"type": "string", "description": "分类名，如 咖啡"},
+                            "display_order": {"type": "integer", "description": "排序"},
+                        },
+                    },
+                    "description": "菜品分类列表",
+                },
+                "dishes": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name": {"type": "string"},
+                            "category_name": {"type": "string", "description": "所属分类名"},
+                            "price": {"type": "number"},
+                            "description": {"type": "string"},
+                        },
+                    },
+                    "description": "菜品列表",
+                },
+                "spec_dimensions": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name": {"type": "string", "description": "规格维度名，如 温度/杯型/甜度"},
+                            "options": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "label": {"type": "string"},
+                                        "price_delta": {"type": "number", "description": "加价"},
+                                        "is_default": {"type": "boolean"},
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    "description": "可选，规格选项（温度、杯型、甜度等）",
                 },
             },
-            "required": ["project_name", "description"],
+            "required": ["project_name", "service_modes", "categories", "dishes"],
         },
     },
 ]
 
 
 async def handle_generate(args: dict) -> dict:
-    """Handle generate_miniprogram tool call."""
+    """Handle generate_miniprogram tool call — build BusinessSchema from structured data."""
     project_name = args["project_name"]
-    description = args.get("description", "")
+    service_modes = args.get("service_modes", ["dineIn"])
+    categories = args.get("categories", [])
+    dishes = args.get("dishes", [])
+    spec_dimensions = args.get("spec_dimensions", [])
 
-    # Build basic schema — LLM will enrich it
-    schema_data = {
-        "project_name": project_name,
-        "generated": {
+    schema = BusinessSchema(
+        project_name=project_name,
+        service_modes=[ServiceMode(m) for m in service_modes],
+        categories=[{"name": c["name"], "display_order": c.get("display_order", i)} for i, c in enumerate(categories)],
+        dishes=[{
+            "name": d["name"],
+            "category_name": d["category_name"],
+            "price": d["price"],
+            "description": d.get("description", ""),
+        } for d in dishes],
+        spec_dimensions=[{
+            "name": s["name"],
+            "options": [{"label": o["label"], "price_delta": o.get("price_delta", 0), "is_default": o.get("is_default", False)} for o in s.get("options", [])],
+        } for s in spec_dimensions],
+        generated={
             "skill_description": f"{project_name} — AI 驱动的智能点单助手",
             "constraint_rules": [
                 "禁止编造菜品 ID、规格值、价格",
@@ -81,22 +131,7 @@ async def handle_generate(args: dict) -> dict:
                 "支付成功前禁止向用户宣布已支付",
             ],
         },
-    }
-
-    # Use LLM if available
-    if settings.deepseek_api_key or settings.anthropic_api_key:
-        from app.api.models.requests import InferSchemaRequest
-        req = InferSchemaRequest(
-            project_name=project_name,
-            description=description,
-        )
-        try:
-            schema = await inferrer.infer(req)
-        except Exception:
-            traceback.print_exc()
-            schema = BusinessSchema(**schema_data)
-    else:
-        schema = BusinessSchema(**schema_data)
+    )
 
     # Generate project
     out_dir = Path("/tmp/miniprogram-gen") / project_name
